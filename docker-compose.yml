@@ -1,0 +1,26 @@
+
+
+
+
+# Specify the version of Docker Compose
+
+services:
+  app: # Name of your Node.js service
+    build:
+      context: .
+    ports:
+      - "5444:5444" # Map port 5444 on the host to port 5444 in the container
+    volumes:
+      - .:/AMAZON_RAYAN # Mount the current directory to /app in the container
+    working_dir: /AMAZON_RAYAN # Set the working directory in the container
+    command: npm start # Command to run your Node.js application
+
+  mongodb: # Name of your MongoDB service
+    image: mongo:latest # Use the latest MongoDB image
+    ports:
+      - "27017:27017" # Map port 27017 on the host to port 27017 in the container
+    volumes:
+      - mongodb_data:/data/db # Persist MongoDB data
+
+volumes:
+  mongodb_data: # Define the volume for MongoDB data
