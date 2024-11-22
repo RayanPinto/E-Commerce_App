@@ -124,11 +124,13 @@ print("Response body: ${res.body}");
         'Content-Type': 'application/json; charset=UTF-8',
         'token': token,
       },
-    );
+    ).timeout(Duration(seconds: 5));
+    print(tokenRes.body);  // Log the raw response
+
 
     if (tokenRes.statusCode == 200) {
       var response = jsonDecode(tokenRes.body);
-
+    
       if (response == true) {
         http.Response userRes = await http.get(
           Uri.parse("$uri/"),
