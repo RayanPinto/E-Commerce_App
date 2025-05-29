@@ -1,7 +1,5 @@
 import 'package:amazon_rayan/controller/homeController.dart';
 import 'package:amazon_rayan/model/product.dart';
-import 'package:amazon_rayan/utils/account_button.dart';
-import 'package:amazon_rayan/view/auth/ScrollController.dart';
 import 'package:amazon_rayan/view/auth/TopCategories.dart';
 import 'package:amazon_rayan/view/auth/productDetail.dart';
 import 'package:amazon_rayan/view/searchScreen.dart';
