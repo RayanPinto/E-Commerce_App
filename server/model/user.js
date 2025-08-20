@@ -12,9 +12,9 @@ const userSchema = mongoose.Schema({
     trim: true,
     validate: {
       validator: (value) => {
-        const re =
-          /^[a-zA-Z0-9_.+]*[a-zA-Z][a-zA-Z0-9_.+]*@[a-zA-z0-9-]+\.[a-zA-Z0-9-.]+$/;
-        return value.match(re);
+        // More permissive email regex
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(value);
       },
       message: "Enter a valid email address",
     },
@@ -37,22 +37,19 @@ const userSchema = mongoose.Schema({
     type: String,
     default: "user",
   },
-  token: { // Add this field to store the token
+  token: {
     type: String,
-    
-
-  
-},
-
-cart:[
-  {
-    product:productSchema,quantity:{
-      type:Number,required:true,
-    },
   },
-]
-
-
+  cart: [
+    {
+      product: productSchema,
+      quantity: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
 });
-const User=mongoose.model("User", userSchema);
+
+const User = mongoose.model("User", userSchema);
 module.exports = User;

@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-
-final String uri = 'http://192.168.1.36:6000';
-
-
-
-
+// Update this to your current IP address
+final String uri = 'http://192.168.137.1:6000';
 
 class GlobalVariables {
   static Color primaryColor = Colors.orange;

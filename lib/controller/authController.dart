@@ -16,47 +16,105 @@ class AuthController {
       required String email,
       required String name,
       required String password}) async {
+    // Enhanced validation
     if (email.isEmpty || name.isEmpty || password.isEmpty) {
       showSnackBar(context, "Please fill in all fields");
       return;
     }
+
+    // Email format validation
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      showSnackBar(context, "Please enter a valid email address");
+      return;
+    }
+
+    // Password length validation
+    if (password.length < 8) {
+      showSnackBar(context, "Password must be at least 8 characters long");
+      return;
+    }
+
     try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Center(child: CircularProgressIndicator());
+        },
+      );
+
       User user = User(
           id: '',
-          email: email,
-          name: name,
+          email: email.trim(),
+          name: name.trim(),
           password: password,
           address: '',
           token: '',
-          type: '',
+          type: 'user',
           cart: []);
-      http.Response res = await http.post(Uri.parse("$uri/api/signup"),
-          body: jsonEncode(user.fromAppToDB()),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8'
-          });
-          print("Request body: ${jsonEncode(user.fromAppToDB())}");
-print("Response status code: ${res.statusCode}");
-print("Response body: ${res.body}");
 
+      print("🌐 Attempting to connect to: $uri/api/signup");
+      print("📤 Request data: ${jsonEncode(user.fromAppToDB())}");
 
-      if (res.statusCode != 201) {
-        // Handle non-200 responses
-        showSnackBar(context, "Failed to create account. Please try again.");
-        return;
+      http.Response res = await http.post(
+        Uri.parse("$uri/api/signup"),
+        body: jsonEncode(user.fromAppToDB()),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+      ).timeout(Duration(seconds: 10)); // Add timeout
+
+      // Close loading indicator
+      Navigator.of(context).pop();
+
+      print("📥 Response status code: ${res.statusCode}");
+      print("📥 Response body: ${res.body}");
+      print("📥 Response headers: ${res.headers}");
+
+      if (res.statusCode == 201) {
+        // Success
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                "Account Created Successfully! Please login with the same credentials."),
+            backgroundColor: Colors.green));
+      } else if (res.statusCode == 400) {
+        // Bad request - user already exists or validation error
+        try {
+          var errorData = jsonDecode(res.body);
+          showSnackBar(context, errorData['msg'] ?? "Account creation failed");
+        } catch (e) {
+          showSnackBar(context, "Account creation failed. Please try again.");
+        }
+      } else if (res.statusCode == 500) {
+        // Server error
+        try {
+          var errorData = jsonDecode(res.body);
+          showSnackBar(
+              context, "Server error: ${errorData['msg'] ?? 'Unknown error'}");
+        } catch (e) {
+          showSnackBar(
+              context, "Server error occurred. Please try again later.");
+        }
+      } else {
+        // Other errors
+        showSnackBar(
+            context, "Failed to create account. Status: ${res.statusCode}");
       }
-
-      httpErrorHandler(
-          response: res,
-          context: context,
-          onSuccess: () {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
-                    "Account Created Successfully! Please login with the same credentials."),
-                backgroundColor: Colors.green));
-          });
     } catch (e) {
-      showSnackBar(context, "Error occured-${e.toString()}");
+      // Close loading indicator if still showing
+      Navigator.of(context).pop();
+
+      print("❌ Error during signup: $e");
+
+      if (e.toString().contains('SocketException')) {
+        showSnackBar(context,
+            "Cannot connect to server. Please check your internet connection and try again.");
+      } else if (e.toString().contains('TimeoutException')) {
+        showSnackBar(context, "Request timed out. Please try again.");
+      } else {
+        showSnackBar(context, "Error occurred: ${e.toString()}");
+      }
     }
   }
 
@@ -68,92 +126,119 @@ print("Response body: ${res.body}");
       showSnackBar(context, "Please fill in all fields");
       return;
     }
+
     try {
-      http.Response res = await http.post(Uri.parse("$uri/api/signin"),
-          body: jsonEncode({"email": email, "password": password}),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8'
-          });
-      print('Response status: ${res.statusCode}');
-      print('Response body: ${res.body}');
-      print('Email: $email, Password: $password');
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Center(child: CircularProgressIndicator());
+        },
+      );
 
-      if (res.statusCode != 200) {
-        // Handle non-200 responses
-        showSnackBar(context, "Failed to sign in. Please try again.");
-        return;
-      }
+      print("🌐 Attempting to sign in at: $uri/api/signin");
 
-      httpErrorHandler(
-          response: res,
-          context: context,
-          onSuccess: () async {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
-                  "Welcome User.",
-                  textAlign: TextAlign.center,
-                ),
-                backgroundColor: Colors.green));
-            SharedPreferences sharedPreferences =
-                await SharedPreferences.getInstance();
-            Provider.of<UserProvider>(context, listen: false).setUser(res.body);
-            print("TOKEN VALUE IS HERE");
-            print(jsonDecode(res.body)['token']);
-            await sharedPreferences.setString(
-                "token", jsonDecode(res.body)['token']);
-            Navigator.pushNamedAndRemoveUntil(
-                context, BottomNavBar.routeName, (route) => false);
-          });
-    } catch (e) {
-      showSnackBar(context, "Error occured-${e.toString()}");
-    }
-  }
-  Future<String> fetchUserData(BuildContext context) async {
-  SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-  String? token = sharedPreferences.getString("token");
+      http.Response res = await http.post(
+        Uri.parse("$uri/api/signin"),
+        body: jsonEncode({"email": email.trim(), "password": password}),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+      ).timeout(Duration(seconds: 10));
 
-  if (token == null) {
-    sharedPreferences.setString("token", "");
-    return '{"error": "No token found"}'; // Return error if no token
-  }
+      // Close loading indicator
+      Navigator.of(context).pop();
 
-  try {
-    var tokenRes = await http.post(
-      Uri.parse("$uri/validateToken"),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-        'token': token,
-      },
-    ).timeout(Duration(seconds: 5));
-    print(tokenRes.body);  // Log the raw response
+      print('📥 Response status: ${res.statusCode}');
+      print('📥 Response body: ${res.body}');
 
+      if (res.statusCode == 200) {
+        // Success
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Welcome User."), backgroundColor: Colors.green));
 
-    if (tokenRes.statusCode == 200) {
-      var response = jsonDecode(tokenRes.body);
-    
-      if (response == true) {
-        http.Response userRes = await http.get(
-          Uri.parse("$uri/"),
-          headers: <String, String>{
-            'Content-Type': 'application/json;charset=UTF-8',
-            'token': token,
-          },
-        );
+        SharedPreferences sharedPreferences =
+            await SharedPreferences.getInstance();
+        Provider.of<UserProvider>(context, listen: false).setUser(res.body);
 
-        var userProvider = Provider.of<UserProvider>(context, listen: false);
-        userProvider.setUser(userRes.body);
+        var tokenData = jsonDecode(res.body);
+        await sharedPreferences.setString("token", tokenData['token']);
 
-        return userRes.body; // Return the user data
+        Navigator.pushNamedAndRemoveUntil(
+            context, BottomNavBar.routeName, (route) => false);
+      } else if (res.statusCode == 400) {
+        // Bad request - wrong credentials
+        try {
+          var errorData = jsonDecode(res.body);
+          showSnackBar(context, errorData['msg'] ?? "Sign in failed");
+        } catch (e) {
+          showSnackBar(context, "Invalid email or password");
+        }
       } else {
-        return '{"error": "Invalid token"}'; // Handle invalid token case
+        showSnackBar(context, "Sign in failed. Please try again.");
       }
-    } else {
-      return '{"error": "Token validation failed"}'; // Handle failed token validation
-    }
-  } catch (e) {
-    print("Error fetching user data: $e"); // Print the error for debugging
-    return '{"error": "Unexpected error occurred: ${e.toString()}"}'; // Return error message
-  }
-}
+    } catch (e) {
+      // Close loading indicator if still showing
+      Navigator.of(context).pop();
 
+      print("❌ Error during signin: $e");
+
+      if (e.toString().contains('SocketException')) {
+        showSnackBar(context,
+            "Cannot connect to server. Please check your internet connection and try again.");
+      } else if (e.toString().contains('TimeoutException')) {
+        showSnackBar(context, "Request timed out. Please try again.");
+      } else {
+        showSnackBar(context, "Error occurred: ${e.toString()}");
+      }
+    }
+  }
+
+  Future<String> fetchUserData(BuildContext context) async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    String? token = sharedPreferences.getString("token");
+
+    if (token == null || token.isEmpty) {
+      return '{"error": "No token found"}';
+    }
+
+    try {
+      var tokenRes = await http.post(
+        Uri.parse("$uri/validateToken"),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'token': token,
+        },
+      ).timeout(Duration(seconds: 5));
+
+      print("Token validation response: ${tokenRes.body}");
+
+      if (tokenRes.statusCode == 200) {
+        var response = jsonDecode(tokenRes.body);
+
+        if (response == true) {
+          http.Response userRes = await http.get(
+            Uri.parse("$uri/"),
+            headers: <String, String>{
+              'Content-Type': 'application/json;charset=UTF-8',
+              'token': token,
+            },
+          );
+
+          var userProvider = Provider.of<UserProvider>(context, listen: false);
+          userProvider.setUser(userRes.body);
+
+          return userRes.body;
+        } else {
+          return '{"error": "Invalid token"}';
+        }
+      } else {
+        return '{"error": "Token validation failed"}';
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+      return '{"error": "Unexpected error occurred: ${e.toString()}"}';
+    }
+  }
 }
