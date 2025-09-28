@@ -40,7 +40,16 @@ class AuthController {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return Center(child: CircularProgressIndicator());
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Creating account...", style: TextStyle(fontSize: 16)),
+              ],
+            ),
+          );
         },
       );
 
@@ -57,13 +66,25 @@ class AuthController {
       print("🌐 Attempting to connect to: $uri/api/signup");
       print("📤 Request data: ${jsonEncode(user.fromAppToDB())}");
 
+      // Test connection first
+      try {
+        await http.get(Uri.parse(uri)).timeout(Duration(seconds: 5));
+        print("✅ Server is reachable");
+      } catch (e) {
+        print("❌ Server connection test failed: $e");
+        Navigator.of(context).pop(); // Close loading dialog
+        showSnackBar(context,
+            "Cannot connect to server. Please check if the server is running and try again.");
+        return;
+      }
+
       http.Response res = await http.post(
         Uri.parse("$uri/api/signup"),
         body: jsonEncode(user.fromAppToDB()),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8'
         },
-      ).timeout(Duration(seconds: 10)); // Add timeout
+      ).timeout(Duration(seconds: 15)); // Increased timeout to 15 seconds
 
       // Close loading indicator
       Navigator.of(context).pop();
@@ -109,9 +130,10 @@ class AuthController {
 
       if (e.toString().contains('SocketException')) {
         showSnackBar(context,
-            "Cannot connect to server. Please check your internet connection and try again.");
+            "Cannot connect to server. Please check your internet connection and ensure the server is running.");
       } else if (e.toString().contains('TimeoutException')) {
-        showSnackBar(context, "Request timed out. Please try again.");
+        showSnackBar(context,
+            "Request timed out. The server might be slow or overloaded. Please try again.");
       } else {
         showSnackBar(context, "Error occurred: ${e.toString()}");
       }
@@ -133,11 +155,32 @@ class AuthController {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return Center(child: CircularProgressIndicator());
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Signing in...", style: TextStyle(fontSize: 16)),
+              ],
+            ),
+          );
         },
       );
 
       print("🌐 Attempting to sign in at: $uri/api/signin");
+
+      // Test connection first
+      try {
+        await http.get(Uri.parse(uri)).timeout(Duration(seconds: 5));
+        print("✅ Server is reachable");
+      } catch (e) {
+        print("❌ Server connection test failed: $e");
+        Navigator.of(context).pop(); // Close loading dialog
+        showSnackBar(context,
+            "Cannot connect to server. Please check if the server is running and try again.");
+        return;
+      }
 
       http.Response res = await http.post(
         Uri.parse("$uri/api/signin"),
@@ -145,7 +188,7 @@ class AuthController {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8'
         },
-      ).timeout(Duration(seconds: 10));
+      ).timeout(Duration(seconds: 15)); // Increased timeout to 15 seconds
 
       // Close loading indicator
       Navigator.of(context).pop();
@@ -186,9 +229,10 @@ class AuthController {
 
       if (e.toString().contains('SocketException')) {
         showSnackBar(context,
-            "Cannot connect to server. Please check your internet connection and try again.");
+            "Cannot connect to server. Please check your internet connection and ensure the server is running.");
       } else if (e.toString().contains('TimeoutException')) {
-        showSnackBar(context, "Request timed out. Please try again.");
+        showSnackBar(context,
+            "Request timed out. The server might be slow or overloaded. Please try again.");
       } else {
         showSnackBar(context, "Error occurred: ${e.toString()}");
       }
