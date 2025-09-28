@@ -116,7 +116,7 @@ linux/build/
 
 # VS Code related
 .vscode/
-.settings
+.settings/
 
 # Other
 *.swp
