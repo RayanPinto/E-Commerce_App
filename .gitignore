@@ -115,7 +115,7 @@ linux/build/
 *.iws
 
 # VS Code related
-.vscode
+.vscode/
 .settings/
 
 # Other
